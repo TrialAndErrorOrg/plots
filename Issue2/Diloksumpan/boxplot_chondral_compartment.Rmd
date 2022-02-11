@@ -1,0 +1,58 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library("tidyverse")
+library("knitr")
+library("plotly")
+library("DT")
+library("readxl")
+
+knitr::opts_chunk$set(echo = F, warning = F)
+
+theme_set(theme_bw())
+
+```
+
+
+```{r create_plot, fig.height = 4, fig.width = 10}
+
+gag_dna_df <- tibble(
+  gag_or_col = factor(rep(c(rep("GAG/dsDNA (ug./ug.)",6), rep("Collagen/dsDNA (ug./ug.)",6)), 2), levels = c("GAG/dsDNA (ug./ug.)", "Collagen/dsDNA (ug./ug.)")),
+  laden_free = factor(c(rep("Cell laden", 12), rep("Cell free", 12)), levels = c("Cell laden", "Cell free")),
+  value = c(15.3880429364724, 9.58679103398324, 28.6746748472416, 44.5342526361271, 34.309488445403, 50.288987122976,
+            85.2467351196815, 9.9764222920369, 112.179008603892, 23.179278871258, 4.11905622292535, 243.232151001788,
+           27.8448975026742, 7.72317657495594, 19.0250772368154, 16.7027976400927, 22.8084089082522, 52.5248967555423,
+           9.82053945095083, NA, 230.207409779318, 31.7845126823044, 144.538068924992, 388.911482026086),
+  ly = rep(c(rep(451.253235648726,6), rep(205.328687127712,6)), 2)
+) %>%
+  group_by(laden_free, gag_or_col) %>%
+  mutate(mean = mean(value, na.rm = T))
+
+gag_dna_df %>% 
+  group_by(gag_or_col) %>%
+  group_map(~ plot_ly(.,
+                      x = ~laden_free,
+                      y = ~value,
+                      color = ~ gag_or_col,
+                      colors = c("#12799d", "#ffba08"),
+                      type="box",
+                      hoverinfo = "y") %>%
+              add_trace(y = ~ly, 
+                        type = "scatter",
+                        mode = "lines",
+                        line = list(color = "black", dash="dot"), 
+                        showlegend = FALSE) %>%
+              add_markers(y = ~mean,
+                          marker = list(color = "black", symbol = '4', size = 8),
+                          showlegend = FALSE) %>%
+              layout(yaxis = list(type = "log")),
+            keep = TRUE) %>%
+  subplot(.) %>% layout(annotations = list(
+    list(y = 1.05, x = -0.04, text = "<b>A</b>", showarrow = F, xref='paper', yref='paper'),
+    list(y = 1.05, x = 0.5, text = "<b>B</b>", showarrow = F, xref='paper', yref='paper'))
+  )
+
+```

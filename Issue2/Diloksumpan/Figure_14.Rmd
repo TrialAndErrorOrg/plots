@@ -1,0 +1,230 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library("tidyverse")
+library("knitr")
+library("plotly")
+library("DT")
+library("readxl")
+
+knitr::opts_chunk$set(echo = F, warning = F)
+
+theme_set(theme_bw())
+
+```
+
+
+```{r create_plot, fig.height = 6}
+
+
+
+# PLOT 14A = C
+gagcoldna_df <- tibble(
+  Pony = c(
+    rep(1, 2),
+    rep(2, 2),
+    rep(3, 2),
+    rep(4, 2),
+    rep(5, 2),
+    rep(6, 2),
+    rep(1, 2),
+    rep(2, 2),
+    rep(3, 2),
+    rep(4, 2),
+    rep(5, 2),
+    rep(6, 2)
+  ),
+  gagcoldna =  c(
+    c(15.3880429364724, 27.8448975026742),
+    c(9.58679103398324, 7.72317657495594),
+    c(28.6746748472416, 19.0250772368154),
+    c(44.5342526361271, 16.7027976400927),
+    c(34.309488445403, 22.8084089082522),
+    c(50.288987122976, 52.5248967555423),
+    c(85.2467351196815, 9.82053945095083),
+    c(9.9764222920369, 0),
+    c(112.179008603892, 230.207409779318),
+    c(23.179278871258, 31.7845126823044),
+    c(4.11905622292535, 144.538068924992),
+    c(243.232151001788, 388.911482026086)
+  ),
+  gag_or_col = factor(
+    c(
+      rep("GAG/dsDNA (ug./ug.)", 12),
+      rep("Collagen/dsDNA (ug./ug.)", 12)
+    ),
+    levels = c("GAG/dsDNA (ug./ug.)", "Collagen/dsDNA (ug./ug.)")
+  ),
+  laden_free = factor(rep(c(
+    "Cell laden", "Cell free"
+  ), 12), levels = c("Cell laden", "Cell free"))
+) %>%
+  mutate(text = str_c("Pony ", Pony, ": ", round(gagcoldna, digits = 2), " ug./ug."))
+
+left <- (
+  gagcoldna_df %>%
+    ggplot(aes(
+      laden_free,
+      gagcoldna,
+      colour = Pony,
+      group = Pony,
+      text = text
+    )) +
+    geom_point(aes(shape = as.factor(Pony)), size = 2) +
+    geom_line(aes(linetype = as.factor(Pony))) +
+    theme(
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      legend.position = "none"
+    ) +
+    scale_colour_gradient(low = "#12799d", high = "#ffba08") +
+    facet_wrap(~ gag_or_col, scales = "free", ncol = 1)
+) %>%
+  ggplotly(tooltip = c("text")) %>%
+  layout(annotations = list(
+    list(
+      y = 1.05,
+      x = -0.06,
+      text = "<b>A</b>",
+      showarrow = F,
+      xref = 'paper',
+      yref = 'paper'
+    ),
+    list(
+      y = 0.5,
+      x = -0.06,
+      text = "<b>C</b>",
+      showarrow = F,
+      xref = 'paper',
+      yref = 'paper'
+    )
+  ))
+
+# GAG/DNA (ug/ug.)
+
+ringo_gagdna <-
+  c(
+    15.3880429364724,
+    9.58679103398324,
+    28.6746748472416,
+    44.5342526361271,
+    34.309488445403,
+    50.288987122976
+  )
+paul_gagdna <-
+  c(
+    27.8448975026742,
+    7.72317657495594,
+    19.0250772368154,
+    16.7027976400927,
+    22.8084089082522,
+    52.5248967555423
+  )
+
+GAGDNAratio_RingoPaul <- ringo_gagdna / paul_gagdna
+
+# Col/DNA (ug/ug.)
+ringo_coldna <-
+  c(
+    85.2467351196815,
+    9.9764222920369,
+    112.179008603892,
+    23.179278871258,
+    4.11905622292535,
+    243.232151001788
+  )
+paul_coldna <-
+  c(
+    9.82053945095083,
+    0,
+    230.207409779318,
+    31.7845126823044,
+    144.538068924992,
+    388.911482026086
+  )
+
+ColDNAratio_RingoPaul <- ringo_coldna / paul_coldna
+
+ratios_df <-
+  tibble(
+    GAGDNAColDNAratio_RingoPaul = c(GAGDNAratio_RingoPaul, ColDNAratio_RingoPaul),
+    Pony = rep(c(1, 2, 3, 4, 5, 6), 2),
+    gag_or_col = factor(
+      c(
+        rep("GAG/dsDNA (Natural log Scale)", 6),
+        rep("Collagen/dsDNA (Natural log Scale)", 6)
+      ),
+      levels = c(
+        "GAG/dsDNA (Natural log Scale)",
+        "Collagen/dsDNA (Natural log Scale)"
+      )
+    ),
+    yRef = rep(1, 12)
+  ) %>%
+  mutate(text = str_c("Pony ", Pony, ": ", round(GAGDNAColDNAratio_RingoPaul, 2),
+                      " ", gag_or_col))
+
+right_plotly <- ratios_df %>%
+  group_by(gag_or_col) %>%
+  group_map(
+    ~ plot_ly(.) %>%
+      add_bars(x = ~ Pony,
+      y = ~ GAGDNAColDNAratio_RingoPaul,
+      colors = c("#12799d", "#ffba08"),
+      color = ~ as.character(Pony),
+      type = "bar",
+      text = ~ text,
+      hoverinfo = "text",
+      showlegend = FALSE
+    ) %>%
+      add_trace(y = rep(1, 8), 
+                type = "scatter",
+                mode = "lines",
+                line = list(color = "black", dash="dot"), 
+                hoverinfo='none',
+                showlegend = FALSE) %>%
+      layout(
+        yaxis = list(type = "log"),
+        xaxis = list(showticklabels = FALSE)
+      ) %>%
+      add_annotations(
+        text = "Cell laden/Cell free",
+        x = 1,
+        y = 1.1,
+        yref = "paper",
+        xref = "paper",
+        xanchor = "right",
+        yanchor = "top",
+        showarrow = FALSE,
+        font = list(size = 15)
+      ),
+    keep = TRUE
+  ) %>%
+  subplot(.,
+          nrows = 2,
+          margin = 0.07) %>%
+  layout(annotations = list(
+    list(
+      y = 1.05,
+      x = -0.04,
+      text = "<b>B</b>",
+      showarrow = F,
+      xref = 'paper',
+      yref = 'paper'
+    ),
+    list(
+      y = 0.5,
+      x = -0.04,
+      text = "<b>D</b>",
+      showarrow = F,
+      xref = 'paper',
+      yref = 'paper'
+    )
+  ))
+
+subplot(list(left, right_plotly), margin = 0.04) %>% hide_legend(.)
+
+```
