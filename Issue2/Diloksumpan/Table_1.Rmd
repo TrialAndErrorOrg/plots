@@ -1,0 +1,24 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library("tidyverse")
+library("knitr")
+library("plotly")
+library("DT")
+library("readxl")
+
+knitr::opts_chunk$set(echo = F, warning = F)
+
+df <- read_xlsx(path = "Table_1.xlsx")
+
+```
+
+```{r create_table}
+
+datatable(df, rownames = F,  options = list(dom = 'ft', pageLength = nrow(df)))
+
+```
+
